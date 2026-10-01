@@ -60,15 +60,15 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
 | 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | |
 | 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | |
-| 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | 理由ごとに別トークンで実施。いずれも bypass 後の再 push で即時アラート作成 (`push_protection_bypassed: true`、bypass 者・日時が記録)。通知メール「Secrets bypassed push protection」が届いた (used in tests / false positive で確認) |
+| 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | 理由ごとに別トークンで実施。いずれも bypass 後の再 push で即時アラート作成 (`push_protection_bypassed: true`、bypass 者・日時が記録)。通知メールが 3 理由とも届いた (件名は下表) |
 
 #### 2-4 の詳細: bypass の理由ごとの Secret scanning アラート
 
-| 理由 | アラート | state | resolution | resolved_by |
-| --- | --- | --- | --- | --- |
-| It's used in tests | #2 | resolved | `used_in_tests` | bypass した本人 |
-| It's a false positive | #3 | resolved | `false_positive` | bypass した本人 |
-| I'll fix it later | #4 | **open** | なし | なし |
+| 理由 | アラート | state | resolution | resolved_by | 通知メールの件名 |
+| --- | --- | --- | --- | --- | --- |
+| It's used in tests | #2 | resolved | `used_in_tests` | bypass した本人 | Secrets bypassed push protection in <repo> |
+| It's a false positive | #3 | resolved | `false_positive` | bypass した本人 | Secrets bypassed push protection in <repo> |
+| I'll fix it later | #4 | **open** | なし | なし | **Action needed: Secrets detected in <repo>** (本文: "Please resolve these alerts") |
 
 - 「後で修正」だけがアラートを open のまま残す。他の 2 つはアラート作成と同時に resolved になる
 - 参考: push protection を通さずに push してから手動で FP クローズしたアラート #1 は `push_protection_bypassed: false`
