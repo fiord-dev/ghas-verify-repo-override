@@ -31,7 +31,8 @@
 
 - `ghp_` 形式のチェックサムは **CRC32 を `0-9A-Za-z` 順の base62 で 6 桁**にしたもの。`0-9a-zA-Z` 順で作った値 (`playground/ss-probe-1.env`) は 10 分待っても検出されなかった → **チェックサムが不正な値は検出対象外**
 - リポジトリ設定で push protection を無効 (`secret_scanning_push_protection: disabled`) にしていても、正しい形式の `ghp_` を含む push は `GH013 ... GITHUB PUSH PROTECTION` でブロックされた。
-  個人設定の「Push protection for yourself」(Settings → Code security、既定で有効) が効いている可能性がある → 下記 2-0 で切り分ける
+  → 個人設定の「Push protection for yourself」(Settings → Code security、既定で有効) を Disabled にしたところ push 可能になった。**ブロック元は個人設定** (2-0)
+- 正しい形式の `ghp_` を push すると、push 直後 (約 1 秒) に Secret scanning アラート #1 (GitHub Personal Access Token, validity: unknown) が作成された
 
 ## 1. Security configuration のリポジトリ単位上書き
 
@@ -55,7 +56,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 
 | # | 操作 | 確認内容 | 結果 |
 | --- | --- | --- | --- |
-| 2-0 | repo の PP 無効のまま、個人の Push protection for yourself を無効化して push | ブロックされなくなるか (ブロック元の切り分け) | |
+| 2-0 | repo の PP 無効のまま、個人の Push protection for yourself を無効化して push | ブロックされなくなるか (ブロック元の切り分け) | ブロックされなくなった。アラート #1 が即時作成 |
 | 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
 | 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | |
 | 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | |
