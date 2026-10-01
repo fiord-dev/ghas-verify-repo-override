@@ -1,0 +1,4 @@
+.tokens.local
+__pycache__/
+node_modules/
+*.db

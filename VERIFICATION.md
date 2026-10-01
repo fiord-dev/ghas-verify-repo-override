@@ -1,0 +1,74 @@
+# GHAS 検証手順
+
+> このリポジトリで使うトークンはすべて `scripts/gen_token.py` がランダムに生成した**無意味な値**です。
+> 実在のクレデンシャルは絶対にコミットしないでください。
+
+## 0. 前提: リポジトリ構成
+
+| リポジトリ | 役割 |
+| --- | --- |
+| `ghas-verify-org-default` | org 全体の Security configuration をそのまま適用 (Dependabot / Code Scanning / Secret Scanning / Push Protection すべて有効) |
+| `ghas-verify-repo-override` | 別の Security configuration (またはリポジトリ個別設定) で **Dependabot / Code Scanning を無効化** |
+
+両リポジトリの内容は README 以外同一です。
+
+### org 側の事前設定
+
+1. **Organization settings → Advanced Security → Configurations**
+   - `ghas-all-on` (Dependabot alerts / security updates、Code scanning default setup、Secret scanning、Push protection を有効) を作成し、org の全リポジトリに適用・新規リポジトリの既定にする
+   - `ghas-no-dependabot-codeql` (Dependabot・Code scanning を無効、Secret scanning / Push protection は有効) を作成し、`ghas-verify-repo-override` のみに適用
+   - 確認ポイント: configuration を **Enforce** にすると、リポジトリ側からは変更できなくなります。リポジトリ単位で上書きする検証では、enforce の有無も切り替えて挙動を記録してください。
+2. **Organization settings → Advanced Security → Custom patterns** (Secret Protection が必要)
+   - Name: `ghas-verify-dummy`
+   - Secret format: `GHASVERIFY_[A-Za-z0-9]{40}`
+   - (任意) Before secret: `\A|[^A-Za-z0-9_]` / After secret: `\z|[^A-Za-z0-9]`
+   - Dry run で 0 件を確認してから Publish し、**push protection を有効化**する
+   - 補足: GitHub 標準パターンの検証には `scripts/gen_token.py --type github-pat` も使えます (チェックサムは正しいが、実在しないトークン)
+
+## 1. Security configuration のリポジトリ単位上書き
+
+| # | 確認内容 | 期待 | 結果 |
+| --- | --- | --- | --- |
+| 1-1 | `org-default` の Security タブに Dependabot alerts が出る (`requirements.txt` / `package.json`) | 出る | |
+| 1-2 | `org-default` で Code scanning (CodeQL default setup) が実行され、`app/server.py` / `app/client.js` のアラートが出る | 出る | |
+| 1-3 | `repo-override` で Dependabot alerts が出ない (dependency graph の扱いも確認) | 出ない | |
+| 1-4 | `repo-override` で CodeQL の workflow run が作成されない | 作成されない | |
+| 1-5 | `repo-override` でも Secret scanning / Push protection は有効のまま | 有効 | |
+| 1-6 | configuration を enforce した状態で、リポジトリ管理者が設定を変更できるか | | |
+| 1-7 | `repo-override` を `ghas-all-on` に付け替えたときに、alert / scan が後から生成されるか | | |
+
+## 2. Push Protection / Secret Scanning のアラート単位
+
+各シナリオで使ったトークンは `.tokens.local` (git 管理外) に記録されます。
+
+```bash
+T1=$(scripts/gen_token.py --label s2-1)
+```
+
+| # | 操作 | 確認内容 | 結果 |
+| --- | --- | --- | --- |
+| 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
+| 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | |
+| 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | |
+| 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | |
+| 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
+| 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | |
+| 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | |
+| 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | |
+| 2-9 | `org-default` と `repo-override` に同じ `T4` を push | アラートがリポジトリをまたいで共有されるか (想定: リポジトリ単位) | |
+| 2-10 | `T5` を含むコミットを push せずに、`T5` を削除するコミットを積んで両方まとめて push | 履歴中のみに存在するシークレットもブロック対象か | |
+
+### 想定される整理 (検証で確定させる)
+
+- Secret scanning アラート: **リポジトリ × シークレット値** で 1 件。同じ値の出現箇所は location として集約される
+- Push protection: push に含まれるコミット中の**シークレット値ごと**にブロック。bypass は値ごとに記録される
+
+## 3. Secret Scanning の除外 (`.github/secret_scanning.yml`)
+
+| # | 操作 | 確認内容 | 結果 |
+| --- | --- | --- | --- |
+| 3-1 | `scripts/plant.sh secret-scan-excluded/x.env "$T6"` → push | Push protection にブロックされるか | |
+| 3-2 | 3-1 が通ったら、Secret scanning アラートが作成されないこと | 作成されない | |
+| 3-3 | `playground/excluded-single-file.env` (単一ファイル指定) に `T7` | ファイル単位の除外が効くか | |
+| 3-4 | 同じ `T6` を除外外のパス `playground/d.env` にも追加 | アラートの location に除外パスが含まれないか | |
+| 3-5 | `secret_scanning.yml` 自体を変更するのと同じ push でトークンを除外パスに追加 | 同一 push での除外設定が反映されるか | |

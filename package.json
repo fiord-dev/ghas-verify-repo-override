@@ -1,0 +1,11 @@
+{
+  "name": "ghas-verify-sample",
+  "version": "0.0.1",
+  "private": true,
+  "description": "GHAS verification sample. Intentionally vulnerable dependencies. Do not use.",
+  "dependencies": {
+    "lodash": "4.17.15",
+    "minimist": "1.2.0",
+    "axios": "0.21.0"
+  }
+}

@@ -1,0 +1,11 @@
+# Dependabot version updates (security alerts/updates はリポジトリ/org の設定で制御)
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"

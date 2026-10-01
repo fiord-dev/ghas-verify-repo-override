@@ -1,0 +1,8 @@
+# Dependabot alerts を発生させるため、既知の脆弱性を持つ古いバージョンを固定しています。
+# 本番利用不可。検証専用。
+Flask==0.12.2
+Django==2.2.0
+requests==2.19.1
+PyYAML==5.3
+Jinja2==2.10
+urllib3==1.24.1
