@@ -71,6 +71,8 @@ T1=$(scripts/gen_token.py --label s2-1)
 | I'll fix it later | #4 | **open** | なし | なし | **Action needed: Secrets detected in <repo>** (本文: "Please resolve these alerts") |
 
 - 「後で修正」だけがアラートを open のまま残す。他の 2 つはアラート作成と同時に resolved になる
+- 「後で修正」で bypass した未解決のアラート #4 と同じ値を別ファイルに push → **ブロックされず通過**。アラート #4 に location が追加され、open のまま。新規アラートなし
+  → 2-7 (FP クローズ済み) と合わせ、**一度 bypass/アラート化された値は、アラートの state (open/resolved) に関わらず push protection の対象外**になる
 - 参考: push protection を通さずに push してから手動で FP クローズしたアラート #1 は `push_protection_bypassed: false`
 
 | 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
