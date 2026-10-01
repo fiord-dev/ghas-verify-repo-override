@@ -58,8 +58,9 @@ T1=$(scripts/gen_token.py --label s2-1)
 | --- | --- | --- | --- |
 | 2-0 | repo の PP 無効のまま、個人の Push protection for yourself を無効化して push | ブロックされなくなるか (ブロック元の切り分け) | ブロックされなくなった。アラート #1 が即時作成 |
 | 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
-| 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | |
-| 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | |
+| 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | ブロック。表示は **1 件** (unblock URL も 1 つ)。locations には 2 ファイルのうち `s2-2-b.env` の 1 箇所のみ表示 |
+| 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | ブロック。表示は **1 件** (URL 1 つ)。locations は 1 つ目のコミット `s2-3-a.env` の 1 箇所のみ |
+| 2-3b | 異なる 2 つの値を 1 コミット・1 回の push に含める | 件数 | **2 件** (値ごとに見出し・location・unblock URL が別々) → **Push protection のブロック単位はシークレット値**。同じ値の出現箇所は代表 1 箇所のみ表示 |
 | 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | 理由ごとに別トークンで実施。いずれも bypass 後の再 push で即時アラート作成 (`push_protection_bypassed: true`、bypass 者・日時が記録)。通知メールが 3 理由とも届いた (件名は下表) |
 
 #### 2-4 の詳細: bypass の理由ごとの Secret scanning アラート
