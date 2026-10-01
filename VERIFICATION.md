@@ -64,7 +64,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
 | 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | |
 | 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | |
-| 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | |
+| 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | **reopen されず resolved (false positive) のまま。新規アラートも作られず、既存アラート #1 に location が追加された** (push から約 15 秒) |
 | 2-9 | `org-default` と `repo-override` に同じ `T4` を push | アラートがリポジトリをまたいで共有されるか (想定: リポジトリ単位) | |
 | 2-10 | `T5` を含むコミットを push せずに、`T5` を削除するコミットを積んで両方まとめて push | 履歴中のみに存在するシークレットもブロック対象か | |
 
