@@ -19,6 +19,8 @@
    - `ghas-no-dependabot-codeql` (Dependabot・Code scanning を無効、Secret scanning / Push protection は有効) を作成し、`ghas-verify-repo-override` のみに適用
    - 確認ポイント: configuration を **Enforce** にすると、リポジトリ側からは変更できなくなります。リポジトリ単位で上書きする検証では、enforce の有無も切り替えて挙動を記録してください。
 2. **Organization settings → Advanced Security → Custom patterns** (Secret Protection が必要)
+   - ⚠️ **Free プランの org ではカスタムパターンは使えません** (API: `Feature not available in this organization`)。
+     その場合は既定の `github-pat` 形式 (`ghp_...`) を使います。public リポジトリは Free プランでもプロバイダーパターンがスキャン対象です。
    - Name: `ghas-verify-dummy`
    - Secret format: `GHASVERIFY_[A-Za-z0-9]{40}`
    - (任意) Before secret: `\A|[^A-Za-z0-9_]` / After secret: `\z|[^A-Za-z0-9]`
