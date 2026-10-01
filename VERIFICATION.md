@@ -60,7 +60,19 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
 | 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | |
 | 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | |
-| 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | |
+| 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | 理由ごとに別トークンで実施。いずれも bypass 後の再 push で即時アラート作成 (`push_protection_bypassed: true`、bypass 者・日時が記録)。通知メール「Secrets bypassed push protection」が届いた (used in tests / false positive で確認) |
+
+#### 2-4 の詳細: bypass の理由ごとの Secret scanning アラート
+
+| 理由 | アラート | state | resolution | resolved_by |
+| --- | --- | --- | --- | --- |
+| It's used in tests | #2 | resolved | `used_in_tests` | bypass した本人 |
+| It's a false positive | #3 | resolved | `false_positive` | bypass した本人 |
+| I'll fix it later | #4 | **open** | なし | なし |
+
+- 「後で修正」だけがアラートを open のまま残す。他の 2 つはアラート作成と同時に resolved になる
+- 参考: push protection を通さずに push してから手動で FP クローズしたアラート #1 は `push_protection_bypassed: false`
+
 | 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
 | 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | |
 | 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | 個人・org(repo) の PP を有効化後、FP クローズ済みのアラート #1 の値を別ファイル (`TEST_TOKEN=`) に push → **ブロックされず通過**。アラート #1 に location 追加、resolved のまま。対照として新規値を push すると GH013 でブロック → **FP クローズ済みの値は Push protection の対象から外れる** |
