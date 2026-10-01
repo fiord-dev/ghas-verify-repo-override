@@ -63,7 +63,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 2-4 | 2-1 を **bypass (reason: false positive)** で push | bypass 後に生成されるアラートの state / resolution | |
 | 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
 | 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | |
-| 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | |
+| 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | 個人・org(repo) の PP を有効化後、FP クローズ済みのアラート #1 の値を別ファイル (`TEST_TOKEN=`) に push → **ブロックされず通過**。アラート #1 に location 追加、resolved のまま。対照として新規値を push すると GH013 でブロック → **FP クローズ済みの値は Push protection の対象から外れる** |
 | 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | **reopen されず resolved (false positive) のまま。新規アラートも作られず、既存アラート #1 に location が追加された** (push から約 15 秒) |
 | 2-8b | アラート #1 と同じ値を、変数名を `TEST_TOKEN` に変えて別ファイルに push | 変数名 (行の文字列) が変わっても同じアラートとして扱われるか | **同じアラート #1 に location が追加され、resolved (false positive) のまま。新規アラートなし** → アラート/FP 判定の単位は変数名やファイルではなく**シークレット値** |
 | 2-9 | `org-default` と `repo-override` に同じ `T4` を push | アラートがリポジトリをまたいで共有されるか (想定: リポジトリ単位) | |
