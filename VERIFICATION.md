@@ -82,7 +82,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | **reopen されず resolved (false positive) のまま。新規アラートも作られず、既存アラート #1 に location が追加された** (push から約 15 秒) |
 | 2-8b | アラート #1 と同じ値を、変数名を `TEST_TOKEN` に変えて別ファイルに push | 変数名 (行の文字列) が変わっても同じアラートとして扱われるか | **同じアラート #1 に location が追加され、resolved (false positive) のまま。新規アラートなし** → アラート/FP 判定の単位は変数名やファイルではなく**シークレット値** |
 | 2-9 | `org-default` と `repo-override` に同じ `T4` を push | アラートがリポジトリをまたいで共有されるか (想定: リポジトリ単位) | 先に `repo-override` (repo の PP 無効、個人 PP のみ有効) に push → 個人 PP でブロック。bypass 画面に**理由の選択肢なし**で承認 → 通過し、`repo-override` にアラート #1 (open, `push_protection_bypassed: true`) が作成。**通知メールは届かず**。続けて同じ値を `org-default` に push → **GH013 でブロック** → アラート・push protection の許可は**リポジトリ単位**で、他リポジトリには引き継がれない |
-| 2-10 | `T5` を含むコミットを push せずに、`T5` を削除するコミットを積んで両方まとめて push | 履歴中のみに存在するシークレットもブロック対象か | |
+| 2-10 | `T5` を含むコミットを push せずに、`T5` を削除するコミットを積んで両方まとめて push | 履歴中のみに存在するシークレットもブロック対象か | 追加コミット `cce83c9` → 削除コミット `a8783a5` をまとめて push。最終ツリーにファイルは存在しないが **GH013 でブロック**。location は追加側のコミット (`cce83c9`) を指す → Push protection は**最終状態ではなく push に含まれる全コミットの差分**を見る。解消には履歴の書き換え (rebase/squash) か bypass が必要 |
 
 ### 想定される整理 (検証で確定させる)
 
