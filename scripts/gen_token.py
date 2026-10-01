@@ -16,7 +16,8 @@ import secrets
 import string
 import zlib
 
-ALPHABET = string.digits + string.ascii_letters  # base62
+# GitHub トークンのチェックサムは 0-9A-Za-z 順の base62 (0-9a-zA-Z 順だと検出されないことを確認済み)
+ALPHABET = string.digits + string.ascii_uppercase + string.ascii_lowercase
 LOG = pathlib.Path(__file__).resolve().parent.parent / ".tokens.local"
 
 
