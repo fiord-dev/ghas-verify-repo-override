@@ -15,6 +15,7 @@ GitHub Advanced Security (Dependabot / Code Scanning / Secret Scanning / Push Pr
 | --- | --- |
 | `requirements.txt`, `package.json` | Dependabot alerts を発生させる古い依存関係 |
 | `app/server.py`, `app/client.js` | CodeQL に検出させる脆弱なコード |
+| `.github/workflows/vuln-*.yml` | CodeQL (Actions) に検出させる危険なワークフロー (`if: false` で実行されない) |
 | `.github/dependabot.yml` | Dependabot version updates |
 | `.github/secret_scanning.yml` | Secret scanning の除外パス設定 |
 | `secret-scan-excluded/` | 除外対象ディレクトリ |

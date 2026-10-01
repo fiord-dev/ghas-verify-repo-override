@@ -1,0 +1,22 @@
+# Code Scanning (CodeQL for GitHub Actions) 検証用: 意図的に危険な書き方をしたワークフロー。
+# 公開リポジトリで実際に悪用されないよう、すべてのジョブを `if: false` で止めています。
+name: "[vuln] workflow_run artifact poisoning"
+
+on:
+  workflow_run:
+    workflows: ["[vuln] pull_request_target + untrusted checkout"]
+    types: [completed]
+
+jobs:
+  deploy:
+    if: false  # 実行させない。repository/actor 等の条件は CodeQL が「防御」とみなし検出が消えるため使わない
+    runs-on: ubuntu-latest
+    steps:
+      # 信頼できない workflow 由来の artifact を取得して実行 (actions/artifact-poisoning)
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          unzip -o pr.zip
+          ./run.sh

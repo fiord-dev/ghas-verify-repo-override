@@ -72,3 +72,28 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 3-3 | `playground/excluded-single-file.env` (単一ファイル指定) に `T7` | ファイル単位の除外が効くか | |
 | 3-4 | 同じ `T6` を除外外のパス `playground/d.env` にも追加 | アラートの location に除外パスが含まれないか | |
 | 3-5 | `secret_scanning.yml` 自体を変更するのと同じ push でトークンを除外パスに追加 | 同一 push での除外設定が反映されるか | |
+
+## 4. Code Scanning: GitHub Actions ワークフロー
+
+`.github/workflows/vuln-*.yml` は、CodeQL (`actions` 言語) に検出させるために意図的に危険な書き方をしたワークフローです。
+公開リポジトリで悪用されないよう、全ジョブを `if: false` で止めています。
+(`if: github.repository == '...'` のような条件は CodeQL が制御チェックとみなし、untrusted checkout の検出が消えるため使いません)
+
+ローカルの CodeQL CLI 2.27.1 で事前に確認した検出結果:
+
+| ファイル | クエリ | Suite |
+| --- | --- | --- |
+| `vuln-pr-target-checkout.yml` | Checkout of untrusted code in a privileged context (`actions/untrusted-checkout/*`) | default |
+| `vuln-pr-target-checkout.yml` | Excessive Secrets Exposure | default |
+| `vuln-pr-target-checkout.yml` | Workflow does not contain permissions | default |
+| `vuln-script-injection.yml` | Code injection (`issue.title` / `comment.body` / `GITHUB_ENV` への書き込み) | default |
+| `vuln-script-injection.yml` | Unpinned tag for a non-immutable Action | **extended のみ** |
+| `vuln-artifact-poisoning.yml` | Artifact poisoning | default |
+| `vuln-artifact-poisoning.yml` | Workflow does not contain permissions | default |
+
+| # | 確認内容 | 期待 | 結果 |
+| --- | --- | --- | --- |
+| 4-1 | `org-default` の Code scanning default setup の言語に `GitHub Actions` が含まれる | 含まれる | |
+| 4-2 | 上表のアラートが出る (query suite を Extended にすると unpinned-tag も出る) | 出る | |
+| 4-3 | `repo-override` では Actions のアラートも出ない | 出ない | |
+| 4-4 | `vuln-*` のワークフローがどのイベントでも実行されない (skipped になる) | skipped | |

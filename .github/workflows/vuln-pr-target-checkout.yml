@@ -1,0 +1,24 @@
+# Code Scanning (CodeQL for GitHub Actions) 検証用: 意図的に危険な書き方をしたワークフロー。
+# 公開リポジトリで実際に悪用されないよう、すべてのジョブを `if: false` で止めています。
+name: "[vuln] pull_request_target + untrusted checkout"
+
+on:
+  pull_request_target:
+
+# NOTE: permissions 未指定 (actions/missing-workflow-permissions)
+
+jobs:
+  build:
+    if: false  # 実行させない。repository/actor 等の条件は CodeQL が「防御」とみなし検出が消えるため使わない
+    runs-on: ubuntu-latest
+    steps:
+      # PR 作成者のコードを特権コンテキストで checkout (actions/untrusted-checkout)
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      # checkout したコードを実行
+      - run: ./build.sh
+      # 秘密情報の過剰な露出 (actions/excessive-secrets-exposure)
+      - run: echo "configured"
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}

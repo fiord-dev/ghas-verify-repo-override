@@ -1,0 +1,30 @@
+# Code Scanning (CodeQL for GitHub Actions) 検証用: 意図的に危険な書き方をしたワークフロー。
+# 公開リポジトリで実際に悪用されないよう、すべてのジョブを `if: false` で止めています。
+name: "[vuln] script / env injection"
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  triage:
+    if: false  # 実行させない。repository/actor 等の条件は CodeQL が「防御」とみなし検出が消えるため使わない
+    runs-on: ubuntu-latest
+    steps:
+      # 信頼できない入力を run に直接展開 (actions/code-injection)
+      - run: |
+          echo "New issue: ${{ github.event.issue.title }}"
+          echo "${{ github.event.comment.body }}"
+      # GITHUB_ENV への書き込み (actions/envvar-injection)
+      - run: echo "TITLE=${{ github.event.issue.title }}" >> "$GITHUB_ENV"
+      # サードパーティ action をタグ指定 (actions/unpinned-tag)
+      - uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: thanks
