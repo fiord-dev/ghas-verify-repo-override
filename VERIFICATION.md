@@ -38,11 +38,11 @@
 
 | # | 確認内容 | 期待 | 結果 |
 | --- | --- | --- | --- |
-| 1-1 | `org-default` の Security タブに Dependabot alerts が出る (`requirements.txt` / `package.json`) | 出る | |
-| 1-2 | `org-default` で Code scanning (CodeQL default setup) が実行され、`app/server.py` / `app/client.js` のアラートが出る | 出る | |
-| 1-3 | `repo-override` で Dependabot alerts が出ない (dependency graph の扱いも確認) | 出ない | |
-| 1-4 | `repo-override` で CodeQL の workflow run が作成されない | 作成されない | |
-| 1-5 | `repo-override` でも Secret scanning / Push protection は有効のまま | 有効 | |
+| 1-1 | `org-default` の Security タブに Dependabot alerts が出る (`requirements.txt` / `package.json`) | 出る | 出る (open 100 件以上、config `default` enforced) |
+| 1-2 | `org-default` で Code scanning (CodeQL default setup) が実行され、`app/server.py` / `app/client.js` のアラートが出る | 出る | 出る (default setup: actions/javascript-typescript/python、Python/JS/Actions のアラートあり) |
+| 1-3 | `repo-override` で Dependabot alerts が出ない (dependency graph の扱いも確認) | 出ない | 出ない (API: `Dependabot alerts are disabled for this repository`)。dependency graph は有効のまま (SBOM 取得可)。config `test` (enforced) |
+| 1-4 | `repo-override` で CodeQL の workflow run が作成されない | 作成されない | `test` 適用後は CodeQL の run なし (default setup: `not-configured`)。ただし**適用前の初回 push (15:39 UTC) で 1 回スキャン済みで、そのアラート 9 件は open のまま残る**。後から追加した Actions ワークフローのアラートは 0 件 |
+| 1-5 | `repo-override` でも Secret scanning / Push protection は有効のまま | 有効 | Secret scanning は有効 (2-9 でアラート作成を確認)。Push protection は config `test` で disabled |
 | 1-6 | configuration を enforce した状態で、リポジトリ管理者が設定を変更できるか | | |
 | 1-7 | `repo-override` を `ghas-all-on` に付け替えたときに、alert / scan が後から生成されるか | | |
 
@@ -57,7 +57,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 | # | 操作 | 確認内容 | 結果 |
 | --- | --- | --- | --- |
 | 2-0 | repo の PP 無効のまま、個人の Push protection for yourself を無効化して push | ブロックされなくなるか (ブロック元の切り分け) | ブロックされなくなった。アラート #1 が即時作成 |
-| 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | |
+| 2-1 | `scripts/plant.sh playground/a.env "$T1"` → push | Push protection にブロックされるか。ブロック画面でのシークレットの数え方 | ブロックされる (2-0 ほか)。値ごとに 1 件、location と unblock URL を表示 |
 | 2-2 | 同じ `T1` を `playground/b.env` にも追加し、2 ファイルを 1 回の push に含める | ブロック時の表示は 1 件か、location ごとに 2 件か | ブロック。表示は **1 件** (unblock URL も 1 つ)。locations には 2 ファイルのうち `s2-2-b.env` の 1 箇所のみ表示 |
 | 2-3 | `T1` を含むコミット 2 つを積んでまとめて push | コミットごとか、シークレット値ごとか | ブロック。表示は **1 件** (URL 1 つ)。locations は 1 つ目のコミット `s2-3-a.env` の 1 箇所のみ |
 | 2-3b | 異なる 2 つの値を 1 コミット・1 回の push に含める | 件数 | **2 件** (値ごとに見出し・location・unblock URL が別々) → **Push protection のブロック単位はシークレット値**。同じ値の出現箇所は代表 1 箇所のみ表示 |
@@ -76,8 +76,8 @@ T1=$(scripts/gen_token.py --label s2-1)
   → 2-7 (FP クローズ済み) と合わせ、**一度 bypass/アラート化された値は、アラートの state (open/resolved) に関わらず push protection の対象外**になる
 - 参考: push protection を通さずに push してから手動で FP クローズしたアラート #1 は `push_protection_bypassed: false`
 
-| 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | |
-| 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | |
+| 2-5 | 同じ `T1` を別ファイル `playground/c.env` に追加して push | **再度ブロックされるか**。既存アラートに location が追加されるか、新規アラートか | 2-7 / 2-8 / 2-8b で確認済み: 再ブロックされず、既存アラートに location 追加 |
+| 2-6 | 新しいトークン `T2` を push | 2-4 の FP 判定が別の値に影響しないこと | ブロックされる (`local/pp-control`、2-3b ほか) |
 | 2-7 | Push protection を一時的に無効化して `T3` を push → Secret scanning アラートを **Close as false positive** → PP を再有効化して `T3` を別ファイルに push | Secret scanning で FP クローズ済みの値を Push protection がどう扱うか | 個人・org(repo) の PP を有効化後、FP クローズ済みのアラート #1 の値を別ファイル (`TEST_TOKEN=`) に push → **ブロックされず通過**。アラート #1 に location 追加、resolved のまま。対照として新規値を push すると GH013 でブロック → **FP クローズ済みの値は Push protection の対象から外れる** |
 | 2-8 | 2-7 の後、PP を無効のまま `T3` を別ファイルに push | FP クローズ済みアラートが reopen されるか / location が増えるか | **reopen されず resolved (false positive) のまま。新規アラートも作られず、既存アラート #1 に location が追加された** (push から約 15 秒) |
 | 2-8b | アラート #1 と同じ値を、変数名を `TEST_TOKEN` に変えて別ファイルに push | 変数名 (行の文字列) が変わっても同じアラートとして扱われるか | **同じアラート #1 に location が追加され、resolved (false positive) のまま。新規アラートなし** → アラート/FP 判定の単位は変数名やファイルではなく**シークレット値** |
@@ -126,7 +126,7 @@ T1=$(scripts/gen_token.py --label s2-1)
 
 | # | 確認内容 | 期待 | 結果 |
 | --- | --- | --- | --- |
-| 4-1 | `org-default` の Code scanning default setup の言語に `GitHub Actions` が含まれる | 含まれる | |
-| 4-2 | 上表のアラートが出る (query suite を Extended にすると unpinned-tag も出る) | 出る | |
-| 4-3 | `repo-override` では Actions のアラートも出ない | 出ない | |
-| 4-4 | `vuln-*` のワークフローがどのイベントでも実行されない (skipped になる) | skipped | |
+| 4-1 | `org-default` の Code scanning default setup の言語に `GitHub Actions` が含まれる | 含まれる | 含まれる (`actions`) |
+| 4-2 | 上表のアラートが出る (query suite を Extended にすると unpinned-tag も出る) | 出る | Actions のアラート 8 件 (default suite。unpinned-tag は出ない) |
+| 4-3 | `repo-override` では Actions のアラートも出ない | 出ない | 出ない (0 件) |
+| 4-4 | `vuln-*` のワークフローがどのイベントでも実行されない (skipped になる) | skipped | `pull_request_target` のみ起動 (Dependabot / PR #10 等が契機) し、すべて `action_required` で停止。ジョブは実行されていない |
