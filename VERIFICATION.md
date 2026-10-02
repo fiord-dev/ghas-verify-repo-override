@@ -93,9 +93,9 @@ T1=$(scripts/gen_token.py --label s2-1)
 
 | # | 操作 | 確認内容 | 結果 |
 | --- | --- | --- | --- |
-| 3-1 | `scripts/plant.sh secret-scan-excluded/x.env "$T6"` → push | Push protection にブロックされるか | |
+| 3-1 | `scripts/plant.sh secret-scan-excluded/x.env "$T6"` → push | Push protection にブロックされるか | **GH013 でブロック** (個人 PP: ユーザー申告で disabled、`org-default` の PP: enabled)。location は `secret-scan-excluded/x.env:1` → `paths-ignore` は Push protection には効かない |
 | 3-2 | 3-1 が通ったら、Secret scanning アラートが作成されないこと | 作成されない | |
-| 3-3 | `playground/excluded-single-file.env` (単一ファイル指定) に `T7` | ファイル単位の除外が効くか | |
+| 3-3 | `playground/excluded-single-file.env` (単一ファイル指定) に `T7` | ファイル単位の除外が効くか | Push protection: **GH013 でブロック** (個人 PP: ユーザー申告で disabled、`org-default` の PP: enabled)。ディレクトリ指定と同様、単一ファイル指定も Push protection には効かない。Secret scanning アラート側は未確認 (3-2 と同様に bypass が必要) |
 | 3-4 | 同じ `T6` を除外外のパス `playground/d.env` にも追加 | アラートの location に除外パスが含まれないか | |
 | 3-5 | `secret_scanning.yml` 自体を変更するのと同じ push でトークンを除外パスに追加 | 同一 push での除外設定が反映されるか | |
 
