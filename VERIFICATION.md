@@ -130,3 +130,17 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 4-2 | 上表のアラートが出る (query suite を Extended にすると unpinned-tag も出る) | 出る | Actions のアラート 8 件 (default suite。unpinned-tag は出ない) |
 | 4-3 | `repo-override` では Actions のアラートも出ない | 出ない | 出ない (0 件) |
 | 4-4 | `vuln-*` のワークフローがどのイベントでも実行されない (skipped になる) | skipped | `pull_request_target` のみ起動 (Dependabot / PR #10 等が契機) し、すべて `action_required` で停止。ジョブは実行されていない |
+
+## 5. 既定ブランチ以外・コード以外のシークレット
+
+| # | 操作 | 確認内容 | 結果 |
+| --- | --- | --- | --- |
+| 5-1 | `org-default` (PP 有効) で新規ブランチ `verify/secret-on-branch` に新規値を push | 既定ブランチ以外でもブロックされるか | **GH013 でブロック** (`refs/heads/verify/secret-on-branch` に対するルール違反として表示) |
+| 5-2 | `repo-override` (PP 無効) で新規ブランチ `verify/secret-on-branch` に新規値を push | 既定ブランチ以外でもアラートになるか | **push 直後にアラート #4 (open) 作成**。location はブランチ上のコミット `eb46a49` |
+| 5-3 | `org-default` で Issue #11 の本文に新規値 | 検出されるか / 投稿がブロックされるか | **投稿はブロックされず**、約 1 秒でアラート #6 (location type: `issue_body`) |
+| 5-4 | Issue #11 のコメントに新規値 | 同上 | ブロックされず、アラート #7 (`issue_comment`) |
+| 5-5 | PR #10 のコメントに新規値 | 同上 | ブロックされず、アラート #8 (`pull_request_comment`) |
+
+- Push protection は git push (ブランチを問わない) に適用され、Issue / PR のコメント投稿 (API 経由) はブロックしない
+- Secret scanning は Issue / PR の本文・コメントも対象で、コードと同じアラート一覧に location type 付きで並ぶ
+- 注意: 本文・コメントを編集で消しても、編集履歴に値が残る。実在のシークレットなら削除だけでなく rotate/revoke が必要
