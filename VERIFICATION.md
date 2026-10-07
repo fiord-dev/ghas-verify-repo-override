@@ -155,6 +155,11 @@ T1=$(scripts/gen_token.py --label s2-1)
 | 6-2a | 現在の main から `verify/s6-2a` を切り、変更なしで push | main にある既存シークレット (#1, `s2-9.env`) がブランチで再検知されるか | **再検知されない**。#1 の location は増えず、新規アラートもなし |
 | 6-2b | `verify/s6-2b` で #1 の値を含む `s2-9.env` の**別の行**を編集して push (`f4794cb`、新しい blob) | 既存シークレットを含むファイルを変更すると location が増えるか | **増えない** (5 分以上経過)。新規アラートもなし → コミットの**差分で追加された行**のみが検知対象 |
 | 6-2c | `verify/s6-2c` で #1 と同じ値を新規ファイル `s6-2c.env` に追加して push (`fb2367e`) | 同じ値をブランチで新たに追加した場合 | push 直後に **既存アラート #1 に location が追加**。新規アラートなし |
+| 6-2d | main と履歴を共有しない orphan ブランチ `verify/s6-2d` (`101515f`) に、新規値 C と #1 と同じ値を入れて push | main と無関係なブランチでも検知されるか | push 約 2 秒後に **新規値 C でアラート #8**、**#1 に location (`s6-2d-same-as-1.env`) 追加** → 検知される。単位は値、場所はコミットの追加行 |
+| 6-3 | config `test` の Secret scanning を**無効化**した状態で、値 A (追加 `9d8b23a` → 削除 `987d220`) と値 B (HEAD に残す `27ad5d4`) を 1 回で push (06:29:13 UTC) → その後有効化 | 有効化時に履歴のみの値も検知されるか | 有効化後に **A (#7) / B (#6) とも open で存在**。location は追加コミット → **履歴のみの値も検知対象**。ただし `created_at` は 06:29:15 (push 2 秒後、無効化中)。有効化時の遡りスキャンではなく、push 時点で検知済みだったものが見えるようになったと考えられる (`publicly_leaked: true`)。6-5 で再確認 |
+| 6-4 | 6-3 の後、オプション (non-provider patterns / generic secrets / validity checks) 無効のまま秘密鍵・接続文字列・パスワードのダミーを HEAD 用 (`s6-4-head.env`) と履歴のみ (`94ce2d1` → `fcd92fd`) で push → config `test` でオプションを有効化 (06:41 UTC) | オプション有効化時に遡って検知されるか / validity が更新されるか | **検証不可**。15 分経過しても新規アラートなし、validity は全件 `unknown` のまま。config 上は `enabled` だが**リポジトリの `security_and_analysis` は `disabled` のまま** (検証開始前から同様) → Free プラン org では Secret Protection 機能が適用されないと推定 (セクション 3 と同様) |
+| 6-5 | 新規 public リポジトリ `ghas-verify-history-backfill` を作成 → config `default` から外し repo 設定で Secret scanning を無効化 → 履歴のみの値 (`e89138c` 追加 → `bbdb7a1` 削除) と HEAD の値 (`bf7c391`) を push (06:47:52 UTC) → 10 分以上置いて有効化 (06:58 以降) | 6-3 の再確認: 有効化前の push がいつ検知されたか | 有効化後にアラート #1 (HEAD, `head.env`) / #2 (履歴のみ, `history-only.env`) を確認。**`created_at` は両方 06:47:53 (push 1 秒後、無効化中)** → **public リポジトリでは Secret scanning の設定に関わらず push 時にスキャンされ、有効化でアラートが表示されるだけ**。「有効化時の遡りスキャン」は public では観測できない (private リポジトリが必要。Free プラン org では不可) |
 
-- まとめ: Secret scanning は**コミットごとの差分 (追加された行)** を全ブランチ・全履歴でスキャンする。派生しただけのブランチや、シークレット行に触れない変更では再検知されない。HEAD から削除してもアラートは残る
-- 未検証: Secret scanning を有効化する**前**に push された履歴 (HEAD では削除済み) が、有効化時のバックフィルで検知されるか
+- まとめ: Secret scanning は**コミットごとの差分 (追加された行)** を全ブランチ・全履歴でスキャンする。派生しただけのブランチや、シークレット行に触れない変更では再検知されない。orphan ブランチでも追加行は検知される。HEAD から削除してもアラートは残る
+- public リポジトリでは Secret scanning 無効中の push も裏でスキャンされており、有効化するとその時点 (push 時刻) のアラートが現れる
+- 6-4 の秘密鍵・接続文字列・パスワードのダミーは provider pattern 対象外のため、Free プランではアラートにならない
